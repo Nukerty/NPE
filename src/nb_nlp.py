@@ -1,50 +1,108 @@
 import nltk
-import nlp
-import itertools
+import NNP_extractor as npe
+# import nlp
+# import itertools
+import os
 import time
 
+stop_words = set(nltk.corpus.stopwords.words('english'))
 
-class File :
-    def __init__(self, file_name):
-        self.file_name = file_name
-        self.data = ""
-        self.parties_involved = ["",""]
-        self.court_of_appeal = ""
-        self.date_of_judgement = ""
-        # self.appeal_type = ""
-        # self.appeal_no = ""
+class Folder:
+    """
+    FOLDER ACCESS CLASS : has properties
+    1) check_dir - to find correctly annotated files from the documents
+    """
+    def __init__(self,folder_path):
+        self.folder_path = folder_path
+        self.correct_files = []
 
-    def read_file(self):
-        with open (self.file_name) as f :
-            self.data = f.read()
+    def check_dir(self):
+        files = os.listdir(self.folder_path)
+        for file in files:
+            # nb_nlp.load_file_path("../.data/" + file)
+            with open (self.folder_path+file) as f:
+                data = f.read().split('\n')
+                # print(f"FILE NAME : {file}")
+                if (data[6].find('1') == 0):
+                    # print(1)
+                    if (len(data[2]) == 0):
+                        #print(2)
+                        if (data[5].find("The Judgement") == 0 or
+                        data[5].find("The Judgment") == 0 ):
+                            # print(3)
+                            try:
+                                if (time.strptime(data[3], "%d %B %Y")):
+                                    self.correct_files.append(file)
+                            except:
+                                continue
 
-    def parse_file(self):
-        if self.data != "" :
-            self.lines = self.data.split('\n')
-            self.parties_involved = self.lines[0].split(' v ')
-            self.court_of_appeal = self.lines[1]
-            self.date_of_judgement = time.strptime(self.lines[3], "%d %B %Y")
+
+    class File :
+        """
+        FILE ACCESS CLASS : 
+        1)  __str__     : print main points
+        2) read_file    : read a file
+        3) parse_file   : obtain data from the file
+        """
+        def __init__(self, folder_path, file_name):
+            self.folder_path = folder_path
+            self.file_name = file_name
             self.data = ""
-            self.lines = ""
-        else :
-            raise Exception("Please load in file")
+            self.parties_involved = ["",""]
+            self.court_of_appeal = ""
+            self.date_of_judgement = time.localtime()
+            self.judge_involved = ""
+            self.text = ""
+            self.noun_words = set()
+            # self.appeal_type = ""
+            # self.appeal_no = ""
 
-    def __str__ (self):
-        return "Parties involved : {0} vs. {1}\nCourt of Appeal : {2}\nDate of Judgement : {3}".format(
-            self.parties_involved[0], self.parties_involved[1], self.court_of_appeal, self.date_of_judgement)
+        def read_file(self):
+            with open (self.folder_path + self.file_name) as f :
+                self.data = f.read()
+
+        def parse_file(self):
+            if self.data != "" :
+                self.lines = self.data.split('\n')
+                self.parties_involved = self.lines[0].split(' v ')
+                self.court_of_appeal = self.lines[1]
+                self.date_of_judgement = time.strptime(self.lines[3], "%d %B %Y")
+                self.judge_involved = self.lines[5].split(': ')[1]
+                for line in self.lines[6:] :
+                    if len(line) > 0 :
+                        # 5 might be better
+                        if line[:6].find('.') > 0:
+                            line = line[line[:6].find('.')+1:]
+                        sentences = nltk.sent_tokenize(line)
+                        for sentence in sentences :
+                            NNP_list = npe.start(sentence)
+                            _ = [self.noun_words.add(x) for x in NNP_list]
+                self.data = ""
+                self.lines = ""
+            else :
+                raise Exception("Please load in file")
 
 
+        def show_nwds(self, show_words = False):
+            if (show_words):
+                _ = [print(x, end='|') for x in self.noun_words]
+            print(f"\n{len(self.noun_words)}")
+
+        def __str__ (self):
+            return "Parties involved : {0} vs. {1}\nCourt of Appeal : {2}\nDate of Judgement : {3}\nNo. of words in file : {4}".format(
+                self.parties_involved[0], self.parties_involved[1], 
+                self.court_of_appeal, time.strftime("%d-%M-%Y", self.date_of_judgement), 
+                len(self.noun_words))
 class word :
-
     # newid = itertools.count()
-    def __init__(self, name, defintion="", connected_words=[]):
+    def __init__(self, name, definition="", connected_words=[]):
         self.name = name
         self.definition = definition
         self.connected_words = connected_words
         # self.id = word.newid()
 
     def __str__(self):
-        return "(Word : {0:-20}\tDefinition :{1:-100})".format(self.name, self.defintion)
+        return "(Word : {0:-20}\tDefinition :{1:-100})".format(self.name, self.definition)
 
     # def __add__(self, w1, w2):
     #     if (w1.name == w2.name) :
@@ -60,14 +118,13 @@ class word :
 class Graph_of_Words:
 
     # newid = itertools.count().next
-
     def __init__(self, name, words = []):
         if (name != "") :
             self.name = name
             self.words = words
 
     def __str__(self) :
-        return "Graph Name : {0}\nGraph Words : {1}".format(name, words)
+        return "Graph Name : {0}\nGraph Words : {1}".format(self.name, self.words)
 
     def __len__(self):
         return len(self.words)
@@ -80,13 +137,9 @@ class Graph_of_Words:
 
 
 # Sample txt file
-def load_file_path(file_path="../.data/1979_A_20.txt"):
-    x = File(file_path)
-    x.read_file()
-    x.parse_file()
-    print(file_path)
-    del x
-
-
-
-
+# def load_file_path(file_path="../.data/1979_A_20.txt"):
+#     x = File(file_path)
+#     x.read_file()
+#     x.parse_file()
+#     print(file_path)
+#     del x
