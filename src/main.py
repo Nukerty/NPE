@@ -1,6 +1,8 @@
 # Importing Custom Files
 import nltk
+import networkx
 import nb_nlp
+import nb_networkx
 import nl_strings
 
 # Importing Basic Libraries
@@ -9,6 +11,7 @@ import os
 import time
 import shutil
 import threading
+import itertools
 
 def debug_file(file_data):
   print(file_data[5])
@@ -20,18 +23,42 @@ def init_nltk() :
 
 if __name__ == "__main__":
   init_nltk()
-  files = os.listdir("../.data/")
-  # files = ["2005_P_23.txt"]
-  correct_files = []
 
-  folder = nb_nlp.Folder("../.data2/")
-  file = folder.File(folder_path=folder.folder_path,
-      file_name = "2005_P_23.txt")
-  file.read_file()
-  file.parse_file()
-  file.show_nwds(show_words=True)
+  graph = nb_networkx.Graph("Imported graph")
+  graph.load_graph("Default3")
+  graph.show_graph()
+  
 
-  print(file)
+
+
+  # # files = os.listdir("../.data2/")[:20]
+  # # files = ["2005_P_23.txt", "1953_A_6.txt", "1953_L_9.txt"]
+  # files = ["1953_N_6.txt"]
+  # correct_files = []
+
+  # folder = nb_nlp.Folder("../.data2/")
+
+  # graph = nb_networkx.Graph("Base graph")
+  # count = 1
+  # size = len(files)
+  # for f in files:
+  #   print(f"Number {count}/{size} done")
+  #   count += 1
+  #   file = folder.File(folder_path=folder.folder_path,
+  #       file_name = f)
+  #   file.read_file()
+  #   file.parse_file()
+  #   # file.show_nwds()
+
+  #   comb = itertools.combinations(file.noun_words, 2)
+  #   comb_list = tuple(comb)
+
+  #   graph.add_edges_from(comb_list)
+
+  # # graph.show_graph()
+  # # graph.save_graph("Default-data2")
+  # # print(graph)
+  # 
 
   ## DEBUG :
   # for file in files:

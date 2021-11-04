@@ -1,3 +1,10 @@
 notes/**
 .data/**
+.data2/**
 .venv/**
+test_codes/**
+saved_graphs/**
+
+src/__pycache__/**
+*.pyc
+
