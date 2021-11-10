@@ -4,6 +4,7 @@ notes/**
 .venv/**
 test_codes/**
 saved_graphs/**
+.sql_data/**
 
 src/__pycache__/**
 *.pyc

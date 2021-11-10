@@ -3,7 +3,7 @@ import NNP_extractor as npe
 # import nlp
 # import itertools
 import os
-import time
+import datetime
 
 stop_words = set(nltk.corpus.stopwords.words('english'))
 
@@ -12,7 +12,7 @@ class Folder:
     FOLDER ACCESS CLASS : has properties
     1) check_dir - to find correctly annotated files from the documents
     """
-    def __init__(self,folder_path):
+    def __init__(self,folder_path : str):
         self.folder_path = folder_path
         self.correct_files = []
 
@@ -44,16 +44,16 @@ class Folder:
         2) read_file    : read a file
         3) parse_file   : obtain data from the file
         """
-        def __init__(self, folder_path, file_name):
-            self.folder_path = folder_path
-            self.file_name = file_name
-            self.data = ""
-            self.parties_involved = ["",""]
-            self.court_of_appeal = ""
-            self.date_of_judgement = time.localtime()
-            self.judge_involved = ""
-            self.text = ""
-            self.noun_words = set()
+        def __init__(self, folder_path : str, file_name : str):
+            self.folder_path : str = folder_path
+            self.file_name : str = file_name
+            self.data : str = ""
+            self.parties_involved: list[str, str] = ["",""]
+            self.court_of_appeal : str = ""
+            self.date_of_judgement = datetime.datetime.fromisoformat('1950-01-01')
+            self.judge_involved : str = ""
+            self.text : str = ""
+            self.noun_words : set = set()
             # self.appeal_type = ""
             # self.appeal_no = ""
 
@@ -66,7 +66,7 @@ class Folder:
                 self.lines = self.data.split('\n')
                 self.parties_involved = self.lines[0].split(' v ')
                 self.court_of_appeal = self.lines[1]
-                self.date_of_judgement = time.strptime(self.lines[3], "%d %B %Y")
+                self.date_of_judgement = datetime.datetime.strptime(self.lines[3], "%d %B %Y")
                 self.judge_involved = self.lines[5].split(': ')[1]
                 for line in self.lines[6:] :
                     if len(line) > 0 :
@@ -83,19 +83,27 @@ class Folder:
                 raise Exception("Please load in file")
 
 
-        def show_nwds(self, show_words = False):
+        def show_nwds(self, show_words : bool = False) -> None:
             if (show_words):
                 _ = [print(x, end='|') for x in self.noun_words]
             print(f"\n{len(self.noun_words)}")
+
+        def get_nwds_as_str(self) -> str:
+            return ','.join(self.noun_words)
 
         def __str__ (self):
             return "Parties involved : {0} vs. {1}\nCourt of Appeal : {2}\nDate of Judgement : {3}\nNo. of words in file : {4}".format(
                 self.parties_involved[0], self.parties_involved[1], 
                 self.court_of_appeal, time.strftime("%d-%M-%Y", self.date_of_judgement), 
                 len(self.noun_words))
+
+
+
+
+
 class word :
     # newid = itertools.count()
-    def __init__(self, name, definition="", connected_words=[]):
+    def __init__(self, name : str, definition :str ="", connected_words: list[str] = []):
         self.name = name
         self.definition = definition
         self.connected_words = connected_words
@@ -112,13 +120,10 @@ class word :
     #     else :
     #         raise Exception("Not the same words")
 
-
-
-
 class Graph_of_Words:
 
     # newid = itertools.count().next
-    def __init__(self, name, words = []):
+    def __init__(self, name : str, words : list[str] = []):
         if (name != "") :
             self.name = name
             self.words = words
