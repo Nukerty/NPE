@@ -107,3 +107,12 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
   if (show_content):
     sql_obj.read_all_entries()
   del sql_obj
+
+def create_database_words(sql_filename : str, sql_filename_legal : str):
+  sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+
+  sql_obj.init_def_file_words()
+
+  sql_obj2 = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
