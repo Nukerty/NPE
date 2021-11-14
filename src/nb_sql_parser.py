@@ -85,7 +85,8 @@ class SqlObj_for_words:
     try :
       # Metadata to each word
       self.cursor.execute(""" CREATE TABLE words (
-      Word                text,
+      id                  integer     AUTOINCREMENT,
+      Word                text        UNIQUE,
       ContextWords        text,
       ContextWordsProb    text,
       RelatedFiles        text
@@ -101,6 +102,24 @@ class SqlObj_for_words:
   def add_multiple_to_file(self, data : list[word_data]) -> None:
     """ADDS MULTIPLE ELEMENT TO FILE"""
     self.cursor.executemany("INSERT INTO words VALUES (?, ?, ?, ?)", data)
+
+  def search_if_word_exists(self, search_param : str) -> bool:
+    self.cursor.execute("SELECT COUNT(Word) FROM words WHERE Word=(?)", search_param)
+    k = self.cursor.fetchone()
+    if (k[0] == 0):
+      return False
+    return True
+
+  def append_into_exisiting_word(self, word : str, list_of_context_words : list[str]) -> None:
+    if len(list_of_context_words) == 0:
+      raise Exception("Empty list of context words")
+    self.cursor.execute("SELECT ContextWords FROM words WHERE Word=(?)", word)
+    data = self.cursor.fetchone()
+    self.cursor.execute("UPDATE words SET ContextWords=(?) WHERE Word=(?)",
+                        data+','+','.join(list_of_context_words),word)
+
+  def delete_word(self, word : str) -> None:
+    self.cursor.execute("DELETE FROM words WHERE Word=(?)", word)
 
   def __del__(self):
     del self.cursor

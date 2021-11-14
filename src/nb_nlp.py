@@ -107,10 +107,13 @@ class word :
         self.name = name
         self.definition = definition
         self.connected_words = connected_words
+        self.related_files = []
         # self.id = word.newid()
 
     def __str__(self):
-        return "(Word : {0:-20}\tDefinition :{1:-100})".format(self.name, self.definition)
+        # Shows the top 5 files
+        return "Word : {0:-20}\nDefinition :{1:-100}\nRelated files : {2}\n".format(
+            self.name, self.definition, self.related_files[:5])
 
     # def __add__(self, w1, w2):
     #     if (w1.name == w2.name) :
