@@ -89,7 +89,8 @@ class Folder:
             print(f"\n{len(self.noun_words)}")
 
         def get_nwds_as_str(self) -> str:
-            return ','.join(self.noun_words)
+            # Changed ',' variant to '|' because of less use
+            return '|'.join(self.noun_words)
 
         def __str__ (self):
             return "Parties involved : {0} vs. {1}\nCourt of Appeal : {2}\nDate of Judgement : {3}\nNo. of words in file : {4}".format(
@@ -103,17 +104,44 @@ class Folder:
 
 class word :
     # newid = itertools.count()
-    def __init__(self, name : str, definition :str ="", connected_words: list[str] = []):
+    def __init__(self, name : str, definition :str ="",
+                 connected_words: list[str] = [], contextwordsprob : list[float] = [],
+                 related_files: list[str] = []):
         self.name = name
-        self.definition = definition
-        self.connected_words = connected_words
-        self.related_files = []
+        # self.definition = definition
+        self.contextwords = connected_words
+        self.contextwordsprob = contextwordsprob
+        self.related_files = related_files
         # self.id = word.newid()
 
     def __str__(self):
         # Shows the top 5 files
         return "Word : {0:-20}\nDefinition :{1:-100}\nRelated files : {2}\n".format(
             self.name, self.definition, self.related_files[:5])
+
+    def add_context_words(self, add_context_words : set[str],
+                          probability_list : list[float], related_files : list[str]):
+        for i in range (len(add_context_words)):
+
+            if (add_context_words[i] in self.contextwords):
+                contextwordsprob[self.contextwords.index(add_context_words[i])] += probability_list
+                continue
+
+            self.contextwords.append(add_context_words[i])
+            self.contextwordsprob.append(probability_list[i])
+
+        for rl_file in related_files:
+            if (rl_file in self.related_files):
+                continue
+            self.related_files.append(rl_file)
+
+    def __del__(self):
+        self.name = ""
+        self.context_words = []
+        self.contextwordsprob = []
+        self.related_files = []
+
+
 
     # def __add__(self, w1, w2):
     #     if (w1.name == w2.name) :

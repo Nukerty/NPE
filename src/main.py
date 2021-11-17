@@ -9,8 +9,12 @@ def init_nltk() :
 
 if __name__ == "__main__":
 
-  init_nltk()
+  # init_nltk()
 
-  files = get_first_n_files()
+  # files = get_first_n_files(number=200)
 
-  create_database(files = files, sql_filename = 'legal_db4.db')
+  # create_database(files = files, sql_filename = 'legal_db5.db')
+
+  # create_database_words(sql_filename_legal='legal_db5.db', sql_filename_words='words_big.db')
+
+  search_interface('words_big.db')

@@ -2,12 +2,16 @@ import nb_nlp
 import nb_networkx
 import nl_strings
 import nb_sql_parser
+import nb_converter
 
 import os
 import time
 import shutil
 import threading
 import itertools
+import random
+
+Converter_class = nb_converter.Converter()
 
 def debug_file(file_data):
   print(file_data[5])
@@ -108,11 +112,87 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
     sql_obj.read_all_entries()
   del sql_obj
 
-def create_database_words(sql_filename : str, sql_filename_legal : str):
-  sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename}",
+def create_database_words(sql_filename_legal : str, sql_filename_words : str):
+  sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
 
-  sql_obj.init_def_file_words()
-
-  sql_obj2 = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
+  sql_obj_words = nb_sql_parser.Sqlobj_for_words(file_path = f"./.sql_data/{sql_filename_words}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
+
+  sql_obj_temp = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+  sql_obj_words.init_def_files()
+
+  sql_obj.cursor.execute("SELECT COUNT(FileName) FROM legaldb")
+  total_number = sql_obj.cursor.fetchone()[0]
+  sql_obj.cursor.execute("SELECT FileName, ContextWords FROM legaldb")
+
+  unique_word_list_check = []
+
+  for count in range(total_number):
+    data = sql_obj.cursor.fetchone()
+    if (data == None):
+      break
+    context_words_list = data[1].split('|')
+    print(data[1])
+    print("\n\n")
+
+    # First self init of elements
+    for context_word_single in context_words_list:
+
+      # Deleting already checked words just in case
+      if context_word_single in unique_word_list_check:
+        continue
+
+      word_dict = dict()
+
+      Converter_class.add_to_word_dict(context_word_single, context_words_list, word_dict)
+
+      # Multiple loop for word instantiation
+      sql_obj_temp.cursor.execute("SELECT * FROM legaldb")
+      if (count > 0) :
+        sql_obj_temp.cursor.fetchmany(count)
+      for count2 in range(count, total_number):
+        temp_data = sql_obj_temp.cursor.fetchone()
+        # Maybe change the below numbers to some struct var outside
+        if context_word_single in temp_data[1].split('|'):
+          Converter_class.add_to_word_dict(context_word_single, temp_data[1].split('|'), word_dict)
+
+      sorted_word_dict = sorted(word_dict.items(), key = lambda x : x[1], reverse = True)[:5] # Should replace to top 5 or smh
+      # TOP NUMBER HERE DECIDE
+
+      del word_dict
+
+      word_list = []
+      count_list = []
+      for (x,y) in sorted_word_dict:
+        word_list.append(x)
+        count_list.append(y)
+
+      word_cl = nb_nlp.word(name = context_word_single, definition="", connected_words = word_list,
+                            contextwordsprob = count_list, related_files="")
+
+      sql_obj_words.add_new_word(word_cl)
+      del word_cl
+      unique_word_list_check.append(context_word_single)
+
+  # sql_obj_words.show_all_words()
+
+
+def search_interface(sql_filename_words:str = 'words_big.db'):
+  sql_word_obj = nb_sql_parser.Sqlobj_for_words(file_path = f"./.sql_data/{sql_filename_words}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+  print("Welcome to the search interface. To exit out of this we present an option at the last")
+  while(True):
+    print("Enter search query : ")
+    val = str(input())
+
+    if (sql_word_obj.search_if_word_exists(val)):
+      sql_word_obj.show_top_contents_of_a_word(val)
+    else:
+      print("\n\nSearch query not found. Try again ? 1=Yes/0=No/~=Yes")
+
+    if(int(input())):
+      continue
+    else:
+      break

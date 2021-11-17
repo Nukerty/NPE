@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import enum
+import nb_nlp
 # import typing
 
 Case_file_details     = list[str, str, str, str, int, str]
@@ -70,7 +71,7 @@ class Sqlobj:
 
 
 
-class SqlObj_for_words:
+class Sqlobj_for_words:
 
   def __init__(self, file_path: str, conn_type: Conn_type):
     self.file_path = file_path
@@ -80,12 +81,11 @@ class SqlObj_for_words:
     self.conn = sqlite3.connect(file_path if conn_type == Conn_type.FILE else ':memory:')
     self.cursor = self.conn.cursor()
 
-  def init_def_file(self) -> None:
+  def init_def_files(self) -> None:
     # Can add k-words here itself for optimizations but lets keep it that way for now
     try :
       # Metadata to each word
       self.cursor.execute(""" CREATE TABLE words (
-      id                  integer     AUTOINCREMENT,
       Word                text        UNIQUE,
       ContextWords        text,
       ContextWordsProb    text,
@@ -103,20 +103,60 @@ class SqlObj_for_words:
     """ADDS MULTIPLE ELEMENT TO FILE"""
     self.cursor.executemany("INSERT INTO words VALUES (?, ?, ?, ?)", data)
 
-  def search_if_word_exists(self, search_param : str) -> bool:
-    self.cursor.execute("SELECT COUNT(Word) FROM words WHERE Word=(?)", search_param)
+  def search_if_word_exists(self, query) -> bool:
+    self.cursor.execute("SELECT COUNT(Word) FROM words WHERE Word=(?)", query)
     k = self.cursor.fetchone()
     if (k[0] == 0):
       return False
     return True
 
-  def append_into_exisiting_word(self, word : str, list_of_context_words : list[str]) -> None:
-    if len(list_of_context_words) == 0:
-      raise Exception("Empty list of context words")
-    self.cursor.execute("SELECT ContextWords FROM words WHERE Word=(?)", word)
+  def add_new_word(self, Word : nb_nlp.word):
+    if (self.conn.in_transaction):
+      self.conn.commit()
+    pack = [Word.name, '|'.join(Word.contextwords),
+            '|'.join([str(x) for x in Word.contextwordsprob]),""]
+    self.cursor.execute("INSERT INTO words VALUES ((?),(?),(?),(?))", pack)
+    self.conn.commit()
+
+  def show_top_contents_of_a_word(self, query : str, check_if_exists : bool = False):
+    if (check_if_exists):
+      search_if_word_exists(query)
+    self.cursor.execute("SELECT * FROM words WHERE Word=(?)", query)
     data = self.cursor.fetchone()
-    self.cursor.execute("UPDATE words SET ContextWords=(?) WHERE Word=(?)",
-                        data+','+','.join(list_of_context_words),word)
+    print("Top 5 words are : ")
+    words = data[1].split('|')
+    words_prob = data[2].split('|')
+    # Print comprehension
+    _ = [print(f"{word[i]} : {words_prob[i]}") for i in range(5)]
+    print()
+
+
+  def show_all_words(self):
+    self.cursor.execute("SELECT * FROM words")
+    data_all = self.cursor.fetchall()
+    for data in data_all:
+      print(data)
+
+
+  # def append_into_exisiting_word(self, word : str, list_of_context_words : list[str],
+  #                                count_list_of_words : list[float]) -> None:
+
+  #   # Error check before hand
+  #   if len(list_of_context_words) == 0:
+  #     raise Exception("Empty list of context words")
+  #   if len(count_list_of_words) == 0:
+  #     raise Exception("Empty list of context words probabilities")
+  #   if len(list_of_context_words) != len(count_list_of_words):
+  #     raise Exception("Unequal sizes of word and word prob in consideration")
+
+
+  #   self.cursor.execute("SELECT ContextWords,ContextWordsProb FROM words WHERE Word=(?)", word)
+  #   context_words, context_words_prob = self.cursor.fetchone()
+  #
+  #   self.cursor.execute("UPDATE words SET ContextWords=(?) WHERE Word=(?)",
+  #                       context_words+'|'+'|'.join(list_of_context_words),word)
+  #   self.cursor.execute("UPDATE words SET ContextWordsProb=(?) WHERE Word=(?)",
+  #                       context_words_prob+'|'+'|'.join(count_list_of_words),word)
 
   def delete_word(self, word : str) -> None:
     self.cursor.execute("DELETE FROM words WHERE Word=(?)", word)
