@@ -103,7 +103,7 @@ class Sqlobj_for_words:
     """ADDS MULTIPLE ELEMENT TO FILE"""
     self.cursor.executemany("INSERT INTO words VALUES (?, ?, ?, ?)", data)
 
-  def search_if_word_exists(self, query) -> bool:
+  def search_if_word_exists(self, query : list[str]) -> bool:
     self.cursor.execute("SELECT COUNT(Word) FROM words WHERE Word=(?)", query)
     k = self.cursor.fetchone()
     if (k[0] == 0):
@@ -118,7 +118,7 @@ class Sqlobj_for_words:
     self.cursor.execute("INSERT INTO words VALUES ((?),(?),(?),(?))", pack)
     self.conn.commit()
 
-  def show_top_contents_of_a_word(self, query : str, check_if_exists : bool = False):
+  def show_top_contents_of_a_word(self, query : str, check_if_exists : bool = False, top_words :int = 20):
     if (check_if_exists):
       search_if_word_exists(query)
     self.cursor.execute("SELECT * FROM words WHERE Word=(?)", query)
@@ -127,7 +127,7 @@ class Sqlobj_for_words:
     words = data[1].split('|')
     words_prob = data[2].split('|')
     # Print comprehension
-    _ = [print(f"{word[i]} : {words_prob[i]}") for i in range(5)]
+    _ = [print(f"{word[i]} : {words_prob[i]}") for i in range(top_words)]
     print()
 
 

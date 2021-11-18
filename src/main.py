@@ -11,10 +11,10 @@ if __name__ == "__main__":
 
   # init_nltk()
 
-  # files = get_first_n_files(number=200)
+  # files = get_first_n_files(number=20000)
 
-  # create_database(files = files, sql_filename = 'legal_db5.db')
+  # create_database(files = files, sql_filename = 'legal_db7.db')
 
-  # create_database_words(sql_filename_legal='legal_db5.db', sql_filename_words='words_big.db')
+  create_database_words(sql_filename_legal='legal_db7.db', sql_filename_words='words_20000.db', top_words=25)
 
-  search_interface('words_big.db')
+  # search_interface('words_big.db')

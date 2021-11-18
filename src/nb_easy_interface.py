@@ -93,26 +93,40 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
   folder = nb_nlp.Folder("../.data2/")
   count = 1
   size = len(files)
+  fail_count = 0
+
+  failed_files = []
   for f in files:
     print(f"Number {count}/{size} done")
+    print(f"File Name : {f}")
     count += 1
     file = folder.File(folder_path=folder.folder_path, file_name = f)
     file.read_file()
-    file.parse_file()
-    # file.show_nwds()
-
-    data = [file.file_name, file.get_nwds_as_str(), file.parties_involved[0],
+    try:
+      file.parse_file()
+      data = [file.file_name, file.get_nwds_as_str(), file.parties_involved[0],
             file.parties_involved[1], file.date_of_judgement.timestamp(),
             file.judge_involved]
 
-    sql_obj.add_single_to_file(data)
-    sql_obj.commit_to_db()
+      sql_obj.add_single_to_file(data)
+      sql_obj.commit_to_db()
+    except KeyboardInterrupt:
+      raise Exception("STOPPED EXECUTION MANUALLY")
+    except:
+      fail_count += 1
+      failed_files.append(f)
+
+
+    # file.show_nwds()
 
   if (show_content):
     sql_obj.read_all_entries()
   del sql_obj
 
-def create_database_words(sql_filename_legal : str, sql_filename_words : str):
+  print(f"Failed files : {failed_files}")
+  print(f"Failed files count : {fail_count}")
+
+def create_database_words(sql_filename_legal : str, sql_filename_words : str, top_words : int = 20):
   sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
 
@@ -127,21 +141,18 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str):
   total_number = sql_obj.cursor.fetchone()[0]
   sql_obj.cursor.execute("SELECT FileName, ContextWords FROM legaldb")
 
-  unique_word_list_check = []
-
   for count in range(total_number):
+    print(f"{count} / {total_number}")
     data = sql_obj.cursor.fetchone()
     if (data == None):
       break
     context_words_list = data[1].split('|')
-    print(data[1])
-    print("\n\n")
 
     # First self init of elements
     for context_word_single in context_words_list:
 
       # Deleting already checked words just in case
-      if context_word_single in unique_word_list_check:
+      if (sql_obj_words.search_if_word_exists([context_word_single])):
         continue
 
       word_dict = dict()
@@ -158,7 +169,7 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str):
         if context_word_single in temp_data[1].split('|'):
           Converter_class.add_to_word_dict(context_word_single, temp_data[1].split('|'), word_dict)
 
-      sorted_word_dict = sorted(word_dict.items(), key = lambda x : x[1], reverse = True)[:5] # Should replace to top 5 or smh
+      sorted_word_dict = sorted(word_dict.items(), key = lambda x : x[1], reverse = True)[:top_words] # Should replace to top 5 or smh
       # TOP NUMBER HERE DECIDE
 
       del word_dict
@@ -174,7 +185,6 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str):
 
       sql_obj_words.add_new_word(word_cl)
       del word_cl
-      unique_word_list_check.append(context_word_single)
 
   # sql_obj_words.show_all_words()
 
@@ -185,12 +195,11 @@ def search_interface(sql_filename_words:str = 'words_big.db'):
   print("Welcome to the search interface. To exit out of this we present an option at the last")
   while(True):
     print("Enter search query : ")
-    val = str(input())
-
-    if (sql_word_obj.search_if_word_exists(val)):
-      sql_word_obj.show_top_contents_of_a_word(val)
-    else:
-      print("\n\nSearch query not found. Try again ? 1=Yes/0=No/~=Yes")
+    val = input()
+    flag : bool = sql_word_obj.search_if_word_exists(val)
+    if (flag):
+      sql_word_obj.show_top_contents_of_a_word(query = val)
+    print("\n\nSearch query not found. Try again ? 1=Yes/0=No/~=Yes")
 
     if(int(input())):
       continue
