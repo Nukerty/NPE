@@ -1,0 +1,8 @@
+* Agenda for 19/11/2021
+
+** TODO Create multithreading processes
++ Creating a multithreading class
++ Check efficiency 10000 times fold
++ Create another base to work on / work with
+
+** DONE Create a Windows datetime handler for unix timestamp
