@@ -99,9 +99,6 @@ class Folder:
                 len(self.noun_words))
 
 
-
-
-
 class word :
     # newid = itertools.count()
     def __init__(self, name : str, definition :str ="",

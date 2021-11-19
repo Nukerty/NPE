@@ -1,5 +1,5 @@
-import networkx
 import matplotlib
+import networkx
 
 # Doing single graph method for now
 def Word_ennumerate(prelist = dict(), word_list = []):

@@ -1,8 +1,9 @@
 import nb_nlp
-import nb_networkx
+# import nb_networkx # Doesn't work with windows due to circular import
 import nl_strings
 import nb_sql_parser
 import nb_converter
+import nb_threading
 
 import os
 import time
@@ -10,8 +11,11 @@ import shutil
 import threading
 import itertools
 import random
+import tqdm
 
 Converter_class = nb_converter.Converter()
+
+# default_folder_name
 
 def debug_file(file_data):
   print(file_data[5])
@@ -96,17 +100,21 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
   fail_count = 0
 
   failed_files = []
-  for f in files:
-    print(f"Number {count}/{size} done")
-    print(f"File Name : {f}")
+  print("Creating database from legal words")
+
+  size_of_files = len(files)
+  for i in tqdm.tqdm(range(size_of_files)):
+    f = files[i]
+    # print(f"File Name : {f}")
     count += 1
     file = folder.File(folder_path=folder.folder_path, file_name = f)
     file.read_file()
     try:
       file.parse_file()
       data = [file.file_name, file.get_nwds_as_str(), file.parties_involved[0],
-            file.parties_involved[1], file.date_of_judgement.timestamp(),
-            file.judge_involved]
+              file.parties_involved[1],
+              0,                        # file.date_of_judgement.timestamp(),
+              file.judge_involved]
 
       sql_obj.add_single_to_file(data)
       sql_obj.commit_to_db()
@@ -115,8 +123,6 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
     except:
       fail_count += 1
       failed_files.append(f)
-
-
     # file.show_nwds()
 
   if (show_content):
@@ -126,7 +132,9 @@ def create_database(files : list[str], sql_filename : str, show_content : bool =
   print(f"Failed files : {failed_files}")
   print(f"Failed files count : {fail_count}")
 
-def create_database_words(sql_filename_legal : str, sql_filename_words : str, top_words : int = 20):
+def create_database_words(sql_filename_legal : str, sql_filename_words : str,
+                          top_words : int = 20,
+                          batch_words : int = 20):
   sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
 
@@ -142,14 +150,22 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str, to
   sql_obj.cursor.execute("SELECT FileName, ContextWords FROM legaldb")
 
   for count in range(total_number):
-    print(f"{count} / {total_number}")
+    print(f"\n{count} / {total_number}", end=':')
     data = sql_obj.cursor.fetchone()
     if (data == None):
       break
     context_words_list = data[1].split('|')
 
+    context_words_list = set(context_words_list)
+    size_context_word_list = len(context_words_list)
+
+
+
+
     # First self init of elements
-    for context_word_single in context_words_list:
+    for idx in tqdm.tqdm(range(size_context_word_list)):
+
+      context_word_single = context_words_list[idx]
 
       # Deleting already checked words just in case
       if (sql_obj_words.search_if_word_exists([context_word_single])):
@@ -185,6 +201,7 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str, to
 
       sql_obj_words.add_new_word(word_cl)
       del word_cl
+      del context_word_single
 
   # sql_obj_words.show_all_words()
 
@@ -196,7 +213,7 @@ def search_interface(sql_filename_words:str = 'words_big.db'):
   while(True):
     print("Enter search query : ")
     val = input()
-    flag : bool = sql_word_obj.search_if_word_exists(val)
+    flag : bool = sql_word_obj.search_if_word_exists([val])
     if (flag):
       sql_word_obj.show_top_contents_of_a_word(query = val)
     print("\n\nSearch query not found. Try again ? 1=Yes/0=No/~=Yes")

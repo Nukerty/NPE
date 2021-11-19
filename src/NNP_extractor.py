@@ -1,6 +1,5 @@
 # Use the start() method to extract the noun phrases and ensure that the nltk is installed
 
-
 import nltk
 from nltk.tag import pos_tag
 from nltk.stem import *
