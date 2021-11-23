@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import nltk
 import NNP_extractor as npe
 # import nlp
@@ -176,3 +178,54 @@ class Graph_of_Words:
 #     x.parse_file()
 #     print(file_path)
 #     del x
+
+class Word_Word_Instance:
+
+    def __init__(self, word_one : list[str] = [], word_two : list[str] = []):
+        self.__word_dict = dict()
+        if (len(word_one) != len(word_two)):
+            raise Exception("Unequal sizes of words")
+        for idx, (word1, word2) in enumerate(zip(word_one, word_two)):
+            self.__word_dict[f"{word1}-{word2}"] = 0 # Initializing with zero
+
+    def __str__(self):
+        return str(self.__word_dict)
+
+    def __add__(self, another_dict_obj : Word_Word_Instance) -> Word_Word_Instance:
+
+        new_instance = self
+        for key in list(another_dict_obj):
+            if key in new_instance.keys():
+                new_instance[key] += another_dict_obj[key]
+            else :
+                new_instance[key] = another_dict_obj[key]
+
+        return new_instance
+
+    def __call__(self):
+        # maybe a check function or smth
+        pass
+
+    def __eq__(self, other : Word_Word_Instance):
+        return self.__word_dict == other.__word_dict
+
+    def __len__(self):
+        return len(self.__word_dict)
+
+    def __getitem__(self, key : str):
+        return self.__word_dict[key]
+
+    def __missing__(self, key : str):
+        print(f"Missing Word : {key}")
+
+    def __setitem__(self, key : str, value : int):
+        self.__word_dict[key] = value
+
+    def __contains__(self, key : str):
+        return key in self.__word_dict
+
+    def __delitem__(self, key : str):
+        self.__word_dict.pop(key)
+
+    def __del__(self):
+        del self.__word_dict

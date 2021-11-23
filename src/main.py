@@ -15,8 +15,8 @@ if __name__ == "__main__":
 
   # create_database(files = files, sql_filename = 'legal_db_10000_thread_1.db', no_of_threads = 100)
 
-  # create_database_words(sql_filename_legal='legal_db7.db', sql_filename_words='words_20000.db', top_words=25)
+  create_database_words(sql_filename_legal='legal_db7.db', sql_filename_words='words_20000.db', top_words=25)
 
-  get_most_common_words(sql_filename='legal_db7.db')
+  # get_most_common_words(sql_filename='legal_db7.db')
 
   # search_interface('words_big.db')

@@ -221,52 +221,42 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str,
   sql_obj_words = nb_sql_parser.Sqlobj_for_words(file_path = f"./.sql_data/{sql_filename_words}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
 
-  sql_obj_temp = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
-                                 conn_type = nb_sql_parser.Conn_type.FILE)
   sql_obj_words.init_def_files()
 
   sql_obj.cursor.execute("SELECT COUNT(FileName) FROM legaldb")
   total_number = sql_obj.cursor.fetchone()[0]
   sql_obj.cursor.execute("SELECT FileName, ContextWords FROM legaldb")
 
-  for count in range(total_number):
-    print(f"\n{count} / {total_number}", end=':')
+  wchandl = nb_nlp.Word_Word_Instance()
+
+  for count in tqdm.tqdm(range(total_number)):
+    # print(f"\n{count} / {total_number}", end=':')
     data = sql_obj.cursor.fetchone()
-    if (data == None):
-      break
-    context_words_list = [x for x in data[1].split('|') if len(x) > 0]
+    # if (data == No:
+    #   break
+    # context_words_list = [x for x in data[1].split('|') if len(x) > 0]
+    context_words_list = String_class.separate_into_list(data[1], separator='|')
 
-    # This enables multithreading but we a better metric
-    context_words_list = list(set(context_words_list))
-    size_context_word_list = len(context_words_list)
+    # delete some top_words here - lets do that later
+    combinations_context_words = itertools.combinations_with_replacement(context_words_list, 2)
 
-    batches_words = [context_words_list[batch_words * i : batch_words * i + batch_words]
-                     for i in range(int(len(context_words_list) / batch_words) +
-                                    (1 if len(context_words_list) % batch_words else 0))]
-    size_batches_words = len(batches_words)
+    for word_instance in combinations_context_words:
+      # Type of dict keys chosen is word1-word2
+      word = f'{word_instance[0]}-{word_instance[1]}'
 
-    print(size_batches_words)
+      if word in wchandl:
+        wchandl[word] += 1
+      else :
+        wchandl[word] = 1
 
+      del word
 
-    # First self init of elements
-    for idx in tqdm.tqdm(range(size_batches_words)):
+    del combinations_context_words
 
-      context_word_single_batch = context_words_list[idx]
-      size_of_context_word_single_batch = len(context_word_list[idx])
+  with open("../notes/count_data.data", 'w') as f:
+    f.write(str(wchandl))
 
-      print("MonkaS")
-
-      threads = [nb_threading.nlReturnValueThread(target=multithread_search_through_file, kwargs={
-                "count" : count, "context_word_single" : context_word_single_batch[i],
-                "context_words_list" : context_words_list})
-                for i in range(size_of_context_word_single_batch)]
-
-      [thread.start()   for thread in threads]
-      vals = [thread.join()    for thread in threads]
-      vals = [val for val in vals if val != None]
-
-      del context_word_single_batch
-      del size_of_context_word_single_batch
+  print(wchandl)
   # sql_obj_words.show_all_words()
 
 def get_most_common_words(sql_filename : str):
@@ -289,12 +279,8 @@ def get_most_common_words(sql_filename : str):
         word_count[word] = 1
 
 
-  word_count = sorted(word_count.items(), key = lambda x : x[1], reverse = True) # Should replace to top 5 or smh
-
   with open("../notes/test_main.data", 'w') as f:
     f.write(str(word_count))
-
-
 
 
 def search_interface(sql_filename_words:str = 'words_big.db'):
