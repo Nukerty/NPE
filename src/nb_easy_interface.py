@@ -1,5 +1,5 @@
 import nb_nlp
-# import nb_networkx # Doesn't work with windows due to circular import
+import nb_networkx # Doesn't work with windows due to circular import
 import nl_strings
 import nb_sql_parser
 import nb_converter
@@ -14,9 +14,89 @@ import random
 import tqdm
 
 Converter_class = nb_converter.Converter()
+# Threading_class = nb_threading.nlThreadHandler()
+String_class = nl_strings.StringHandler()
+
+# INCLUDE IN DOCS THAT MULTITHREADED FUNCTIONS HAVE 'multithread_' PREFIX
+def multithread_search_through_file(
+    count : int,
+    context_word_single : str,
+    # sql_obj_words : nb_sql_parser.Sqlobj_for_words,
+    context_words_list : list[str],
+    # sql_obj_temp : nb_sql_parser.Sqlobj
+    ):
+
+  # Sql_obj_init
+  sql_obj_words = nb_sql_parser.Sqlobj_for_words(file_path = f"./.sql_data/{sql_filename_words}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+
+  sql_obj_temp = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename_legal}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+
+  # Deleting already checked words just in case
+  if (sql_obj_words.search_if_word_exists([context_word_single])):
+    return
+
+  word_dict = dict()
+
+  Converter_class.add_to_word_dict(context_word_single, context_words_list, word_dict)
+
+  # Multiple loop for word instantiation
+  sql_obj_temp.cursor.execute("SELECT * FROM legaldb")
+  if (count > 0) :
+    sql_obj_temp.cursor.fetchmany(count)
+  for count2 in range(count, total_number):
+    temp_data = sql_obj_temp.cursor.fetchone()
+    # Maybe change the below numbers to some struct var outside
+    if context_word_single in temp_data[1].split('|'):
+      Converter_class.add_to_word_dict(context_word_single, temp_data[1].split('|'), word_dict)
+
+  sorted_word_dict = sorted(word_dict.items(), key = lambda x : x[1], reverse = True)[:top_words] # Should replace to top 5 or smh
+  # TOP NUMBER HERE DECIDE
+
+  del word_dict
+
+  word_list = []
+  count_list = []
+  for (x,y) in sorted_word_dict:
+    word_list.append(x)
+    count_list.append(y)
+
+  word_cl = nb_nlp.word(name = context_word_single, definition="", connected_words = word_list,
+                        contextwordsprob = count_list, related_files="")
+
+  sql_obj_words.add_new_word(word_cl)
+  del word_cl
+
+
+def multithread_extract_words_files(f : str,
+                                    # sql_obj : nb_sql_parser.Sqlobj,
+                                    # sql_filename_legal : str,
+                                    data_folder : str = "../.data2/"):
+  # print(f"File Name : {f}")
+  folder = nb_nlp.Folder(data_folder)
+  file = folder.File(folder_path=folder.folder_path, file_name = f)
+  file.read_file()
+  try:
+    file.parse_file()
+    data = [file.file_name, file.get_nwds_as_str(), file.parties_involved[0],
+            file.parties_involved[1],
+            file.date_of_judgement.timestamp(),
+            file.judge_involved]
+    return data
+    # sql_obj.commit_to_db() # A commit show not be required for being threadsafe
+  except KeyboardInterrupt:
+    raise Exception("STOPPED EXECUTION MANUALLY")
+  except IndexError:
+    return None
+  except Exception as e:
+    print(e)
+    return None
+    # fail_count += 1
+    # failed_files.append(f)
+
 
 # default_folder_name
-
 def debug_file(file_data):
   print(file_data[5])
 
@@ -89,48 +169,48 @@ def create_graph(files : list[str]):
   # print(graph)
 
 
-def create_database(files : list[str], sql_filename : str, show_content : bool = False):
+def create_database(files : list[str], sql_filename : str,
+                    show_content : bool = False, no_of_threads : int = 1):
   sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename}",
                                  conn_type= nb_sql_parser.Conn_type.FILE)
 
   sql_obj.init_def_file()
-  folder = nb_nlp.Folder("../.data2/")
-  count = 1
-  size = len(files)
-  fail_count = 0
+  # count = 1
+  # fail_count = 0
+  # failed_files = []
 
-  failed_files = []
   print("Creating database from legal words")
 
-  size_of_files = len(files)
-  for i in tqdm.tqdm(range(size_of_files)):
-    f = files[i]
-    # print(f"File Name : {f}")
-    count += 1
-    file = folder.File(folder_path=folder.folder_path, file_name = f)
-    file.read_file()
-    try:
-      file.parse_file()
-      data = [file.file_name, file.get_nwds_as_str(), file.parties_involved[0],
-              file.parties_involved[1],
-              0,                        # file.date_of_judgement.timestamp(),
-              file.judge_involved]
+  batches_files = [files[no_of_threads * i : no_of_threads * i + no_of_threads]
+                  for i in range(int(len(files) / no_of_threads) +
+                                 (1 if len(files) % no_of_threads else 0))]
+  size_of_batch_files = len(batches_files)
 
-      sql_obj.add_single_to_file(data)
-      sql_obj.commit_to_db()
-    except KeyboardInterrupt:
-      raise Exception("STOPPED EXECUTION MANUALLY")
-    except:
-      fail_count += 1
-      failed_files.append(f)
-    # file.show_nwds()
+  for i in tqdm.tqdm(range(size_of_batch_files)):
+    files = batches_files[i]
+    size_of_file_batch = len(batches_files[i])
+    # count += 1
+
+    threads = [nb_threading.nlReturnValueThread(target=multithread_extract_words_files, kwargs={
+      "f" : files[idx], # "sql_filename_legal" : sql_filename, "sql_obj" : sql_obj
+      }) for idx in range(size_of_file_batch)]
+
+    [thread.start()     for thread in threads]
+    vals = [thread.join()      for thread in threads]
+
+    vals = [val for val in vals if val != None]
+
+    sql_obj.add_multiple_to_file(data = vals)
+    sql_obj.commit_to_db()
+
+
 
   if (show_content):
     sql_obj.read_all_entries()
   del sql_obj
 
-  print(f"Failed files : {failed_files}")
-  print(f"Failed files count : {fail_count}")
+  # print(f"Failed files : {failed_files}")
+  # print(f"Failed files count : {fail_count}")
 
 def create_database_words(sql_filename_legal : str, sql_filename_words : str,
                           top_words : int = 20,
@@ -154,56 +234,67 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str,
     data = sql_obj.cursor.fetchone()
     if (data == None):
       break
-    context_words_list = data[1].split('|')
+    context_words_list = [x for x in data[1].split('|') if len(x) > 0]
 
-    context_words_list = set(context_words_list)
+    # This enables multithreading but we a better metric
+    context_words_list = list(set(context_words_list))
     size_context_word_list = len(context_words_list)
 
+    batches_words = [context_words_list[batch_words * i : batch_words * i + batch_words]
+                     for i in range(int(len(context_words_list) / batch_words) +
+                                    (1 if len(context_words_list) % batch_words else 0))]
+    size_batches_words = len(batches_words)
 
+    print(size_batches_words)
 
 
     # First self init of elements
-    for idx in tqdm.tqdm(range(size_context_word_list)):
+    for idx in tqdm.tqdm(range(size_batches_words)):
 
-      context_word_single = context_words_list[idx]
+      context_word_single_batch = context_words_list[idx]
+      size_of_context_word_single_batch = len(context_word_list[idx])
 
-      # Deleting already checked words just in case
-      if (sql_obj_words.search_if_word_exists([context_word_single])):
-        continue
+      print("MonkaS")
 
-      word_dict = dict()
+      threads = [nb_threading.nlReturnValueThread(target=multithread_search_through_file, kwargs={
+                "count" : count, "context_word_single" : context_word_single_batch[i],
+                "context_words_list" : context_words_list})
+                for i in range(size_of_context_word_single_batch)]
 
-      Converter_class.add_to_word_dict(context_word_single, context_words_list, word_dict)
+      [thread.start()   for thread in threads]
+      vals = [thread.join()    for thread in threads]
+      vals = [val for val in vals if val != None]
 
-      # Multiple loop for word instantiation
-      sql_obj_temp.cursor.execute("SELECT * FROM legaldb")
-      if (count > 0) :
-        sql_obj_temp.cursor.fetchmany(count)
-      for count2 in range(count, total_number):
-        temp_data = sql_obj_temp.cursor.fetchone()
-        # Maybe change the below numbers to some struct var outside
-        if context_word_single in temp_data[1].split('|'):
-          Converter_class.add_to_word_dict(context_word_single, temp_data[1].split('|'), word_dict)
-
-      sorted_word_dict = sorted(word_dict.items(), key = lambda x : x[1], reverse = True)[:top_words] # Should replace to top 5 or smh
-      # TOP NUMBER HERE DECIDE
-
-      del word_dict
-
-      word_list = []
-      count_list = []
-      for (x,y) in sorted_word_dict:
-        word_list.append(x)
-        count_list.append(y)
-
-      word_cl = nb_nlp.word(name = context_word_single, definition="", connected_words = word_list,
-                            contextwordsprob = count_list, related_files="")
-
-      sql_obj_words.add_new_word(word_cl)
-      del word_cl
-      del context_word_single
-
+      del context_word_single_batch
+      del size_of_context_word_single_batch
   # sql_obj_words.show_all_words()
+
+def get_most_common_words(sql_filename : str):
+  sql_obj = nb_sql_parser.Sqlobj(file_path = f"./.sql_data/{sql_filename}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+
+  word_count = dict()
+  total_number = sql_obj.get_total_number_of_entries()
+
+  sql_obj.cursor.execute("SELECT ContextWords FROM legaldb")
+
+
+  for i in tqdm.tqdm(range(int(total_number))):
+    data = sql_obj.cursor.fetchone()
+    separated_list = String_class.separate_into_list(string_data= data[0], separator="|")
+    for word in separated_list:
+      if word in word_count.keys():
+        word_count[word] += 1
+      else:
+        word_count[word] = 1
+
+
+  word_count = sorted(word_count.items(), key = lambda x : x[1], reverse = True) # Should replace to top 5 or smh
+
+  with open("../notes/test_main.data", 'w') as f:
+    f.write(str(word_count))
+
+
 
 
 def search_interface(sql_filename_words:str = 'words_big.db'):

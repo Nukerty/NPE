@@ -1,23 +1,23 @@
 import threading
 import time
-import logging
 import uuid
-import typing
 
+class nlReturnValueThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.result = None
 
-class nlThread (threading.Thread):
-   def __init__(self, threadID, name, counter):
-      threading.Thread.__init__(self)
-      self.threadID = threadID
-      self.name = name
-      self.counter = counter
+    def run(self):
+        if self._target is None:
+            return  # could alternatively raise an exception, depends on the use case
+        try:
+            self.result = self._target(*self._args, **self._kwargs)
+        except Exception as exc:
+            print(f'{type(exc).__name__}: {exc}', file=sys.stderr)  # properly handle the exception
 
-   def run(self, function, *args, **kwargs):
-      # Get lock to synchronize threads
-      threadLock.acquire()
-      function(*args, **kwargs)
-      # Free lock to release next thread
-      threadLock.release()
+    def join(self, *args, **kwargs):
+        super().join(*args, **kwargs)
+        return self.result
 
 class nlThreadHandler:
    def __init__(self, function, no_of_threads : int, function_input_size : int, args):

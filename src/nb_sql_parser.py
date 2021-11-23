@@ -17,9 +17,10 @@ class Sqlobj:
   def __init__(self, file_path: str, conn_type: Conn_type):
     self.file_path = file_path
     self.conn_type = conn_type
-    if (os.path.exists(self.file_path)):
-        print(f"File : {self.file_path} already exists")
-    self.conn = sqlite3.connect(file_path if conn_type == Conn_type.FILE else ':memory:')
+    # if (os.path.exists(self.file_path)):
+    #     print(f"File : {self.file_path} already exists")
+    self.conn = sqlite3.connect(file_path if conn_type == Conn_type.FILE else ':memory:',
+                                check_same_thread = False)
     self.cursor = self.conn.cursor()
 
   def ret_cursor(self) -> sqlite3.Cursor :
@@ -60,10 +61,18 @@ class Sqlobj:
     for row in rows:
       print(row)
 
+  def get_all_entries(self) -> list:
+    self.cursor.execute("SELECT * FROM legaldb")
+    return self.cursor.fetchall()
 
   def get_all_context_words(self):
     self.cursor.execute("SELECT ContextWords FROM legaldb")
     return self.cursor.fetchall()
+
+  def get_total_number_of_entries(self) -> int:
+    self.cursor.execute("SELECT COUNT(*) FROM legaldb")
+    return self.cursor.fetchone()[0]
+
 
   def __del__(self):
     del self.cursor
@@ -78,7 +87,7 @@ class Sqlobj_for_words:
     self.conn_type = conn_type
     if (os.path.exists(self.file_path)):
       print(f"File : {self.file_path} already exists")
-    self.conn = sqlite3.connect(file_path if conn_type == Conn_type.FILE else ':memory:')
+    self.conn = sqlite3.connect(file_path if conn_type == Conn_type.FILE else ':memory:', check_same_thread = False)
     self.cursor = self.conn.cursor()
 
   def init_def_files(self) -> None:
