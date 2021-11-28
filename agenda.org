@@ -1,8 +1,19 @@
 * Agenda for 19/11/2021
 
-** TODO Create multithreading processes
+** DONE Create multithreading processes
 + Creating a multithreading class
 + Check efficiency 10000 times fold
 + Create another base to work on / work with
 
 ** DONE Create a Windows datetime handler for unix timestamp
+
+* Agenda for 23/11/2021
+
+** TODO Create more efficient way of handling these large databases
++ I have worked out a way to handle in O(n) per file O(nC2) which is much better
+than O(n^2) with O(n)
++ Sqlite3 has no providence for pythonic unsafe multithreading
++ Sqlite3 impl without multithreading is extrememly slow
++ Should shift back to the original method
+
+** TODO Create a representable solution for the database in python

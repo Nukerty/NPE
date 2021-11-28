@@ -182,14 +182,15 @@ class Graph_of_Words:
 class Word_Word_Instance:
 
     def __init__(self, word_one : list[str] = [], word_two : list[str] = []):
-        self.__word_dict = dict()
+        self.word_dict = dict()
+        self.__iter_idx = -1
         if (len(word_one) != len(word_two)):
             raise Exception("Unequal sizes of words")
         for idx, (word1, word2) in enumerate(zip(word_one, word_two)):
-            self.__word_dict[f"{word1}-{word2}"] = 0 # Initializing with zero
+            self.word_dict[f"{word1}-{word2}"] = 0 # Initializing with zero
 
     def __str__(self):
-        return str(self.__word_dict)
+        return str(self.word_dict)
 
     def __add__(self, another_dict_obj : Word_Word_Instance) -> Word_Word_Instance:
 
@@ -206,26 +207,39 @@ class Word_Word_Instance:
         # maybe a check function or smth
         pass
 
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.__iter_idx >= len(self.word_dict) - 1:
+            self.__iter_idx = -1
+            raise StopIteration
+        self.__iter_idx += 1
+        return list(self.word_dict.items())[self.__iter_idx]
+
+
+
     def __eq__(self, other : Word_Word_Instance):
-        return self.__word_dict == other.__word_dict
+        return self.word_dict == other.word_dict
 
     def __len__(self):
-        return len(self.__word_dict)
+        return len(self.word_dict)
 
     def __getitem__(self, key : str):
-        return self.__word_dict[key]
+        return self.word_dict[key]
 
     def __missing__(self, key : str):
         print(f"Missing Word : {key}")
 
     def __setitem__(self, key : str, value : int):
-        self.__word_dict[key] = value
+        self.word_dict[key] = value
 
     def __contains__(self, key : str):
-        return key in self.__word_dict
+        return key in self.word_dict
 
     def __delitem__(self, key : str):
-        self.__word_dict.pop(key)
+        self.word_dict.pop(key)
 
     def __del__(self):
-        del self.__word_dict
+        del self.word_dict

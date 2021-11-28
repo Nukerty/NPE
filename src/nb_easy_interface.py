@@ -221,24 +221,40 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str,
   sql_obj_words = nb_sql_parser.Sqlobj_for_words(file_path = f"./.sql_data/{sql_filename_words}",
                                  conn_type = nb_sql_parser.Conn_type.FILE)
 
+  sql_obj_count_words = nb_sql_parser.Sqlobj_for_count_words(file_path = f"./.sql_data/count_words_{sql_filename_words}",
+                                 conn_type = nb_sql_parser.Conn_type.FILE)
+
   sql_obj_words.init_def_files()
+  sql_obj_count_words.init_def_files()
 
   sql_obj.cursor.execute("SELECT COUNT(FileName) FROM legaldb")
   total_number = sql_obj.cursor.fetchone()[0]
   sql_obj.cursor.execute("SELECT FileName, ContextWords FROM legaldb")
 
-  wchandl = nb_nlp.Word_Word_Instance()
+  unique_words = set()
+
 
   for count in tqdm.tqdm(range(total_number)):
+
+    wchandl = nb_nlp.Word_Word_Instance()
     # print(f"\n{count} / {total_number}", end=':')
     data = sql_obj.cursor.fetchone()
+    file_name = data[0]
+    word_list = data[1]
     # if (data == No:
     #   break
     # context_words_list = [x for x in data[1].split('|') if len(x) > 0]
-    context_words_list = String_class.separate_into_list(data[1], separator='|')
+    context_words_list = set(String_class.separate_into_list(word_list, separator='|'))
+
+    custom_stopwords = ["court","case", "order", "appeal", "high court", "view", "question",
+                        "judgement", "time" ,"act", "counsel", "fact", "state", "law", "matter",
+                        "facts", "part", "decision", "year", "india", "reference", "regard",
+                        "period", "sum", "singh", "aforesaid", "vs", "power", "way", "years"]
+
+    context_words_list = [x for x in context_words_list if x not in custom_stopwords]
 
     # delete some top_words here - lets do that later
-    combinations_context_words = itertools.combinations_with_replacement(context_words_list, 2)
+    combinations_context_words = itertools.permutations(context_words_list, 2)
 
     for word_instance in combinations_context_words:
       # Type of dict keys chosen is word1-word2
@@ -249,14 +265,54 @@ def create_database_words(sql_filename_legal : str, sql_filename_words : str,
       else :
         wchandl[word] = 1
 
+      # This line is some real heavy lifting ill try to find an sql parse
+      unique_words.add(word_instance[0])
+
       del word
 
+    del context_words_list
     del combinations_context_words
+    # JUST FOR DEBUG
+    # print("This is faster I hope")
 
-  with open("../notes/count_data.data", 'w') as f:
-    f.write(str(wchandl))
 
-  print(wchandl)
+    for word_count in wchandl.word_dict.keys():
+      word = word_count
+      count = wchandl.word_dict[word_count]
+      word_one, word_two = word.split('-')
+      flag = sql_obj_count_words.search_if_instance_exists(query_word1 = word_one,
+                                                           query_word2= word_two)
+      if (flag):
+        sql_obj_count_words.update_entity(word_one=word_one, word_two=word_two,
+                                          count=count, related_file=file_name, rl_file_add_flag=False)
+      else:
+        sql_obj_count_words.add_single_to_file([word_one, word_two, count, file_name])
+
+    del wchandl
+
+    # print("wchandl handled")
+
+  for word in unique_words:
+    data = sql_obj_count_words.get_top_contents_of_a_word(query=word, number_of_words=25)
+    word_entry  : list[str] = []
+    count_entry : list[int] = []
+    related_files : list[str] = []
+
+    for entry in data:
+      word_entry.append(entry[1])
+      count_entry.append(entry[2])
+      related_files.append(entry[3])
+
+    del data
+
+    # Cleaning related files (shouldn't be a disaster, lets just take one file from each for now)
+    related_files = [x.split('|')[0] for x in related_files]
+
+    sql_obj_words.add_single_to_file([[word, String_class.list_to_str(word_entry, separator='|'),
+                                       String_class.list_to_str(count_entry, separator='|'),
+                                       String_class.list_to_str(related_files, separator='|')]])
+  # print("Ok one iteration done")
+
   # sql_obj_words.show_all_words()
 
 def get_most_common_words(sql_filename : str):
