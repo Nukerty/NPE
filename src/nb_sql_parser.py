@@ -127,7 +127,7 @@ class Sqlobj_for_words:
     words = data[1].split('|')
     words_prob = data[2].split('|')
     # Print comprehension
-    _ = [print(f"{word[i]} : {words_prob[i]}") for i in range(top_words)]
+    _ = [print(f"{words[i]} : {words_prob[i]}") for i in range(top_words)]
     print()
 
 

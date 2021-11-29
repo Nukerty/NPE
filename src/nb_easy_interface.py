@@ -196,10 +196,11 @@ def search_interface(sql_filename_words:str = 'words_big.db'):
   while(True):
     print("Enter search query : ")
     val = input()
-    flag : bool = sql_word_obj.search_if_word_exists(val)
+    flag : bool = sql_word_obj.search_if_word_exists([str(val)])
     if (flag):
-      sql_word_obj.show_top_contents_of_a_word(query = val)
-    print("\n\nSearch query not found. Try again ? 1=Yes/0=No/~=Yes")
+      sql_word_obj.show_top_contents_of_a_word(query = [str(val)])
+    __not = ("" if (flag) else " not")
+    print(f"\n\nSearch query{__not} found. Try again ? 1=Yes/0=No/~=Yes")
 
     if(int(input())):
       continue
